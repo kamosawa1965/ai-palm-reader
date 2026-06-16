@@ -62,13 +62,34 @@ export default function Home() {
   // 撮影処理
   const capturePhoto = () => {
     if (videoRef.current) {
+      const video = videoRef.current;
       const canvas = document.createElement("canvas");
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
+      
+      // スマートフォンの高解像度カメラ対策として、長辺を最大1024pxに制限してリサイズ
+      const maxDimension = 1024;
+      let width = video.videoWidth;
+      let height = video.videoHeight;
+      
+      if (width > height) {
+        if (width > maxDimension) {
+          height = Math.round((height * maxDimension) / width);
+          width = maxDimension;
+        }
+      } else {
+        if (height > maxDimension) {
+          width = Math.round((width * maxDimension) / height);
+          height = maxDimension;
+        }
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
       const ctx = canvas.getContext("2d");
       if (ctx) {
-        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        const imageDataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        ctx.drawImage(video, 0, 0, width, height);
+        // 画質を0.7に落としてJPEG圧縮し、転送サイズを大幅に削減
+        const imageDataUrl = canvas.toDataURL("image/jpeg", 0.7);
         setCapturedImage(imageDataUrl);
         stopCamera();
         analyzeHand(imageDataUrl);
