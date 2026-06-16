@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Sparkles, RefreshCw, Share2 } from "lucide-react";
+import { Camera, Sparkles, RefreshCw, Share2, Copy, Mail } from "lucide-react";
 import styles from "./page.module.css";
 
 type AppState = "home" | "camera" | "loading" | "result";
@@ -22,6 +22,7 @@ export default function Home() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [result, setResult] = useState<FortuneResult | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
+  const [shareModalOpen, setShareModalOpen] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -142,10 +143,9 @@ export default function Home() {
     setAppState("home");
   };
 
-  const handleShare = async () => {
-    if (!result) return;
-    
-    const shareText = `【てのひらダイアリー】私の手相鑑定結果！\n\n` +
+  const getShareText = () => {
+    if (!result) return "";
+    return `【てのひらダイアリー】私の手相鑑定結果！\n\n` +
       `💼 仕事運: ${result.work.score}点\n` +
       `${result.work.text}\n\n` +
       `❤️ 恋愛運: ${result.love.score}点\n` +
@@ -156,16 +156,63 @@ export default function Home() {
       `${result.health.text}\n\n` +
       `✨ 総合アドバイス:\n${result.advice}\n\n` +
       `⚠️ 免責事項:\n` +
-      `本鑑定結果はAIが生成したエンターテインメント目的のものです。占い結果の正確性や将来の実現性を保証するものではありません。\n\n` +
-      `あなたもAIで手相を占ってみよう！`;
-    
-    const shareUrl = typeof window !== "undefined" ? window.location.origin : "";
+      `本鑑定結果はAIが生成したエンターテインメント目的のものです。占い結果の正確性や将来の実現性を保証するものではありません。`;
+  };
 
+  const getShareUrl = () => {
+    return typeof window !== "undefined" ? window.location.origin : "";
+  };
+
+  const shareToX = () => {
+    if (!result) return;
+    const text = getShareText();
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text + "\n\n" + getShareUrl())}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const shareToThreads = () => {
+    if (!result) return;
+    const text = getShareText();
+    const url = `https://threads.net/intent/post?text=${encodeURIComponent(text + "\n\n" + getShareUrl())}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const shareToFacebook = () => {
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getShareUrl())}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const shareToGmail = () => {
+    if (!result) return;
+    const text = getShareText();
+    const subject = "てのひらダイアリー 手相鑑定結果";
+    const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text + "\n\n" + getShareUrl())}`;
+    window.location.href = url;
+  };
+
+  const shareToInstagram = async () => {
+    if (!result) return;
+    try {
+      const text = `${getShareText()}\n\n${getShareUrl()}`;
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      alert("鑑定結果をコピーしました。Instagramを開きますので、貼り付けて投稿やDM等でシェアしてください。");
+      window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const shareToSystem = async () => {
+    if (!result) return;
+    const text = getShareText();
+    const shareUrl = getShareUrl();
     if (navigator.share) {
       try {
         await navigator.share({
           title: "てのひらダイアリー 手相鑑定結果",
-          text: `${shareText}\n\n${shareUrl}`,
+          text: `${text}\n\n${shareUrl}`,
         });
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
@@ -173,17 +220,25 @@ export default function Home() {
         }
       }
     } else {
-      try {
-        await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
-        setCopied(true);
-        setTimeout(() => {
-          setCopied(false);
-        }, 2000);
-      } catch (err) {
-        console.error("Failed to copy text: ", err);
-        alert("コピーに失敗しました。URLを直接コピーしてシェアしてください。");
-      }
+      copyToClipboard();
     }
+  };
+
+  const copyToClipboard = async () => {
+    if (!result) return;
+    try {
+      const text = `${getShareText()}\n\n${getShareUrl()}`;
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error(err);
+      alert("コピーに失敗しました。");
+    }
+  };
+
+  const handleShare = () => {
+    setShareModalOpen(true);
   };
 
   return (
@@ -387,6 +442,105 @@ export default function Home() {
             className={styles.toast}
           >
             鑑定結果をクリップボードにコピーしました！
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {shareModalOpen && (
+          <motion.div
+            className={styles.shareModalOverlay}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShareModalOpen(false)}
+          >
+            <motion.div
+              className={styles.shareModal}
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", duration: 0.4 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className={styles.shareModalTitle}>結果をシェアする</h3>
+              
+              <div className={styles.shareGrid}>
+                {/* X */}
+                <button className={styles.shareItem} onClick={shareToX}>
+                  <div className={styles.shareIconWrapper} style={{ backgroundColor: "#000000" }}>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                  </div>
+                  <span className={styles.shareLabel}>X (Twitter)</span>
+                </button>
+
+                {/* Threads */}
+                <button className={styles.shareItem} onClick={shareToThreads}>
+                  <div className={styles.shareIconWrapper} style={{ backgroundColor: "#101010" }}>
+                    <svg viewBox="0 0 192 192" width="22" height="22" fill="currentColor">
+                      <path d="M141.537 88.9883C140.71 88.5919 139.802 88.3908 138.862 88.3908H138.847C137.525 88.3908 136.262 88.9039 135.31 89.8407C134.358 90.7774 133.826 92.0526 133.826 93.3941V111.458C133.826 114.73 131.144 117.423 127.886 117.423C124.629 117.423 121.947 114.73 121.947 111.458V90.4154C121.947 81.3323 114.619 73.9743 105.576 73.9743H105.516C96.4727 73.9743 89.145 81.3323 89.145 90.4154V111.458C89.145 114.73 86.463 117.423 83.2054 117.423C79.9478 117.423 77.2658 114.73 77.2658 111.458V90.4154C77.2658 74.8398 89.9216 62.1332 105.426 62.1332H105.486C120.99 62.1332 133.646 74.8398 133.646 90.4154V93.3941C133.646 94.7573 134.729 95.8456 136.086 95.8456H136.101C137.458 95.8456 138.541 94.7573 138.541 93.3941C138.541 72.1226 123.69 54.8344 105.367 54.8344H105.307C86.9839 54.8344 72.1328 72.1226 72.1328 93.3941V111.458C72.1328 127.034 84.7886 139.74 100.293 139.74H100.353C114.12 139.74 125.753 129.741 128.093 116.143C130.434 129.741 142.067 139.74 155.834 139.74H155.894C171.398 139.74 184.054 127.034 184.054 111.458V90.4154C184.054 50.854 151.782 18.4485 112.392 18.4485H112.332C72.9423 18.4485 40.6704 50.854 40.6704 90.4154V111.458C40.6704 121.22 48.5639 129.147 58.2818 129.147C68.0003 129.147 75.8938 121.22 75.8938 111.458V90.4154C75.8938 70.1873 92.2157 53.7997 112.362 53.7997H112.422C132.569 53.7997 148.89 70.1873 148.89 90.4154V111.458C148.89 121.22 156.784 129.147 166.502 129.147C176.22 129.147 184.113 121.22 184.113 111.458V90.4154C184.113 46.8524 148.423 11.2332 104.7 11.2332H104.64C60.9174 11.2332 25.2275 46.8524 25.2275 90.4154V111.458C25.2275 133.003 42.6393 150.485 64.097 150.485C85.5546 150.485 102.966 133.003 102.966 111.458V90.4154C102.966 84.819 107.494 80.272 113.067 80.272H113.127C118.7 80.272 123.228 84.819 123.228 90.4154V111.458C123.228 133.003 140.64 150.485 162.097 150.485C183.555 150.485 200.966 133.003 200.966 111.458V90.4154C200.966 38.8358 159.208-2.99902 107.502-2.99902H107.442C55.7364-2.99902 13.9782 38.8358 13.9782 90.4154V111.458C13.9782 143.208 39.697 169.033 71.3283 169.033C87.4116 169.033 102.046 162.33 112.512 151.536C122.978 162.33 137.613 169.033 153.6 169.033C185.327 169.033 211.046 143.208 211.046 111.458V90.4154z"/>
+                    </svg>
+                  </div>
+                  <span className={styles.shareLabel}>Threads</span>
+                </button>
+
+                {/* Instagram */}
+                <button className={styles.shareItem} onClick={shareToInstagram}>
+                  <div className={styles.shareIconWrapper} style={{ background: "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)" }}>
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                      <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                    </svg>
+                  </div>
+                  <span className={styles.shareLabel}>Instagram</span>
+                </button>
+
+                {/* Facebook */}
+                <button className={styles.shareItem} onClick={shareToFacebook}>
+                  <div className={styles.shareIconWrapper} style={{ backgroundColor: "#1877F2" }}>
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+                    </svg>
+                  </div>
+                  <span className={styles.shareLabel}>Facebook</span>
+                </button>
+
+                {/* Gmail */}
+                <button className={styles.shareItem} onClick={shareToGmail}>
+                  <div className={styles.shareIconWrapper} style={{ backgroundColor: "#EA4335" }}>
+                    <Mail size={22} />
+                  </div>
+                  <span className={styles.shareLabel}>Gmail</span>
+                </button>
+
+                {/* コピー */}
+                <button className={styles.shareItem} onClick={copyToClipboard}>
+                  <div className={styles.shareIconWrapper} style={{ backgroundColor: "#8a7b74" }}>
+                    <Copy size={22} />
+                  </div>
+                  <span className={styles.shareLabel}>コピー</span>
+                </button>
+              </div>
+
+              {/* その他の共有 */}
+              {typeof navigator !== "undefined" && navigator.share && (
+                <button 
+                  className="btn-primary w-full justify-center gap-2 mb-3" 
+                  onClick={shareToSystem}
+                  style={{ borderRadius: "1rem", fontSize: "0.9rem" }}
+                >
+                  <Share2 size={16} />
+                  その他のアプリで共有
+                </button>
+              )}
+
+              <button className={styles.closeButton} onClick={() => setShareModalOpen(false)}>
+                閉じる
+              </button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
