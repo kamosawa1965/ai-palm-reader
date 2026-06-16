@@ -21,6 +21,7 @@ export default function Home() {
   const [gender, setGender] = useState<string>("");
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [result, setResult] = useState<FortuneResult | null>(null);
+  const [copied, setCopied] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -118,6 +119,45 @@ export default function Home() {
     setCapturedImage(null);
     setResult(null);
     setAppState("home");
+  };
+
+  const handleShare = async () => {
+    if (!result) return;
+    
+    const shareText = `【てのひらダイアリー】私の手相鑑定結果！\n` +
+      `💼仕事運: ${result.work.score}点\n` +
+      `❤️恋愛運: ${result.love.score}点\n` +
+      `💰金運: ${result.money.score}点\n` +
+      `🌿健康運: ${result.health.score}点\n` +
+      `✨総合アドバイス: ${result.advice}\n\n` +
+      `あなたもAIで手相を占ってみよう！`;
+    
+    const shareUrl = typeof window !== "undefined" ? window.location.origin : "";
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "てのひらダイアリー 手相鑑定結果",
+          text: shareText,
+          url: shareUrl,
+        });
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
+          console.error("Error sharing:", error);
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+        setCopied(true);
+        setTimeout(() => {
+          setCopied(false);
+        }, 2000);
+      } catch (err) {
+        console.error("Failed to copy text: ", err);
+        alert("コピーに失敗しました。URLを直接コピーしてシェアしてください。");
+      }
+    }
   };
 
   return (
@@ -298,11 +338,24 @@ export default function Home() {
                 <RefreshCw size={20} />
                 もう一度
               </button>
-              <button className="btn-primary flex-1 flex justify-center items-center gap-2">
+              <button className="btn-primary flex-1 flex justify-center items-center gap-2" onClick={handleShare}>
                 <Share2 size={20} />
                 シェア
               </button>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {copied && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className={styles.toast}
+          >
+            鑑定結果をクリップボードにコピーしました！
           </motion.div>
         )}
       </AnimatePresence>
