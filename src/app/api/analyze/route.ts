@@ -23,8 +23,8 @@ export async function POST(req: Request) {
     // Base64のプレフィックス(data:image/jpeg;base64,)を削除
     const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
 
-    // 画像とテキストのマルチモーダル対応である最新の flash モデルを使用
-    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+    // 画像とテキストのマルチモーダル対応である安定版の 1.5 flash モデルを使用
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     const prompt = `
 あなたは世界トップクラスの天才手相鑑定士です。
@@ -51,15 +51,38 @@ export async function POST(req: Request) {
 ※画像が手のひらでない場合（isHandがfalseの場合）は、errorMessageのみ適切な理由を入力し、他の項目（work, love等）は空のまま返してください。
     `;
 
-    const result = await model.generateContent([
-      prompt,
-      {
-        inlineData: {
-          data: base64Data,
-          mimeType: "image/jpeg"
+    // 一時的な503エラーなどの混雑対策として、自動リトライロジック（最大3回）を実装
+    let result;
+    let attempts = 0;
+    const maxAttempts = 3;
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    while (attempts < maxAttempts) {
+      try {
+        result = await model.generateContent([
+          prompt,
+          {
+            inlineData: {
+              data: base64Data,
+              mimeType: "image/jpeg"
+            }
+          }
+        ]);
+        break; // 成功したらループを抜ける
+      } catch (err) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          throw err; // 3回とも失敗した場合は例外を投げる
         }
+        // 次のリトライまで少し待つ（指数バックオフ）
+        console.warn(`Gemini API call failed (attempt ${attempts}/${maxAttempts}), retrying...`, err);
+        await delay(1000 * attempts);
       }
-    ]);
+    }
+
+    if (!result) {
+      throw new Error("AIからの応答の取得に失敗しました。");
+    }
 
     const responseText = result.response.text();
     
@@ -77,14 +100,21 @@ export async function POST(req: Request) {
     console.error("Error analyzing image:", error);
     let errorMessage = "サーバーエラーが発生しました。時間を置いて再度お試しください。";
     if (error instanceof Error) {
+      const msg = error.message;
       if (
-        error.message.includes("429") || 
-        error.message.includes("Quota exceeded") || 
-        error.message.includes("Too Many Requests")
+        msg.includes("429") || 
+        msg.includes("Quota exceeded") || 
+        msg.includes("Too Many Requests")
       ) {
         errorMessage = "APIの利用回数制限（クォータ制限）に達しました。1〜2分ほど時間を置いてから、再度撮影をお試しください。";
+      } else if (
+        msg.includes("503") || 
+        msg.includes("Service Unavailable") || 
+        msg.includes("high demand")
+      ) {
+        errorMessage = "AIサーバーが一時的に大変混み合っています。数十秒〜1分ほど時間を空けて、再度撮影をお試しください。";
       } else {
-        errorMessage = error.message;
+        errorMessage = msg;
       }
     }
     return NextResponse.json({ error: errorMessage }, { status: 500 });
