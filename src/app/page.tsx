@@ -145,12 +145,18 @@ export default function Home() {
   const handleShare = async () => {
     if (!result) return;
     
-    const shareText = `【てのひらダイアリー】私の手相鑑定結果！\n` +
-      `💼仕事運: ${result.work.score}点\n` +
-      `❤️恋愛運: ${result.love.score}点\n` +
-      `💰金運: ${result.money.score}点\n` +
-      `🌿健康運: ${result.health.score}点\n` +
-      `✨総合アドバイス: ${result.advice}\n\n` +
+    const shareText = `【てのひらダイアリー】私の手相鑑定結果！\n\n` +
+      `💼 仕事運: ${result.work.score}点\n` +
+      `${result.work.text}\n\n` +
+      `❤️ 恋愛運: ${result.love.score}点\n` +
+      `${result.love.text}\n\n` +
+      `💰 金運: ${result.money.score}点\n` +
+      `${result.money.text}\n\n` +
+      `🌿 健康運: ${result.health.score}点\n` +
+      `${result.health.text}\n\n` +
+      `✨ 総合アドバイス:\n${result.advice}\n\n` +
+      `⚠️ 免責事項:\n` +
+      `本鑑定結果はAIが生成したエンターテインメント目的のものです。占い結果の正確性や将来の実現性を保証するものではありません。\n\n` +
       `あなたもAIで手相を占ってみよう！`;
     
     const shareUrl = typeof window !== "undefined" ? window.location.origin : "";
@@ -363,6 +369,11 @@ export default function Home() {
                 <Share2 size={20} />
                 シェア
               </button>
+            </div>
+
+            <div className={styles.disclaimer} style={{ marginTop: "1.5rem" }}>
+              <p><strong>【免責事項】</strong></p>
+              <p>本アプリの鑑定結果は、AIがインターネット上の学習データをもとに独自に生成したエンターテインメント目的のものです。占い結果の正確性、完全性、または将来の実現性を保証するものではありません。あくまで参考程度の情報として、前向きな気持ちでお楽しみください。</p>
             </div>
           </motion.div>
         )}
