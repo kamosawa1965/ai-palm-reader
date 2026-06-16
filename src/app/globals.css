@@ -1,0 +1,82 @@
+:root {
+  color-scheme: light;
+  --background-start: #fdfbf7; /* Very soft warm white */
+  --background-end: #f5ece9;   /* Dusty rose / beige tint */
+  --text-primary: #4a403a;     /* Warm dark gray/brown */
+  --text-secondary: #6e5f58;   /* Darker taupe for better contrast */
+  --accent-color: #b87d8f;     /* Slightly darker rose for contrast */
+  --accent-hover: #9c5c6f;
+  --card-bg: rgba(255, 255, 255, 0.9); /* More opaque white */
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  forced-color-adjust: none;
+}
+
+html,
+body {
+  forced-color-adjust: none;
+  max-width: 100vw;
+  overflow-x: hidden;
+  background: linear-gradient(135deg, var(--background-start), var(--background-end));
+  color: var(--text-primary);
+  font-family: "Avenir", "Helvetica Neue", "Hiragino Sans", "Yu Gothic", sans-serif;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Utilities */
+.btn-primary {
+  background: linear-gradient(135deg, #c28fa0, #b87d8f); /* Darker rose gradient for high contrast with white text */
+  color: #ffffff;
+  border: none;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 15px rgba(184, 125, 143, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: 0.05em;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(184, 125, 143, 0.5);
+}
+
+.btn-secondary {
+  background: #ffffff; /* Solid white background */
+  color: var(--text-primary);
+  border: 1.5px solid var(--text-secondary); /* Solid visible border */
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: #fdfbf7;
+  border-color: var(--text-primary);
+}
+
+/* Animations */
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 0 0 rgba(212, 163, 179, 0.3); }
+  70% { box-shadow: 0 0 0 15px rgba(212, 163, 179, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(212, 163, 179, 0); }
+}
+
+
