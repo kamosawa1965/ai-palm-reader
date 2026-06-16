@@ -208,7 +208,7 @@ export default function Home() {
     if (!result) return;
     const text = getShareText();
     const shareUrl = getShareUrl();
-    if (navigator.share) {
+    if (typeof navigator !== "undefined" && "share" in navigator) {
       try {
         await navigator.share({
           title: "てのひらダイアリー 手相鑑定結果",
@@ -526,7 +526,7 @@ export default function Home() {
               </div>
 
               {/* その他の共有 */}
-              {typeof navigator !== "undefined" && navigator.share && (
+              {typeof navigator !== "undefined" && "share" in navigator && (
                 <button 
                   className="btn-primary w-full justify-center gap-2 mb-3" 
                   onClick={shareToSystem}
