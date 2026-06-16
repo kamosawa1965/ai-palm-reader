@@ -165,8 +165,7 @@ export default function Home() {
       try {
         await navigator.share({
           title: "てのひらダイアリー 手相鑑定結果",
-          text: shareText,
-          url: shareUrl,
+          text: `${shareText}\n\n${shareUrl}`,
         });
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
