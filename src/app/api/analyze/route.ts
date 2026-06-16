@@ -75,7 +75,18 @@ export async function POST(req: Request) {
 
   } catch (error) {
     console.error("Error analyzing image:", error);
-    const errorMessage = error instanceof Error ? error.message : "サーバーエラーが発生しました";
+    let errorMessage = "サーバーエラーが発生しました。時間を置いて再度お試しください。";
+    if (error instanceof Error) {
+      if (
+        error.message.includes("429") || 
+        error.message.includes("Quota exceeded") || 
+        error.message.includes("Too Many Requests")
+      ) {
+        errorMessage = "APIの利用回数制限（クォータ制限）に達しました。1〜2分ほど時間を置いてから、再度撮影をお試しください。";
+      } else {
+        errorMessage = error.message;
+      }
+    }
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
