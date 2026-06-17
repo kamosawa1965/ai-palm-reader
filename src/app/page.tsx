@@ -130,6 +130,10 @@ export default function Home() {
         ctx.drawImage(video, 0, 0, width, height);
         // 画質を0.7に落としてJPEG圧縮し、転送サイズを大幅に削減
         const imageDataUrl = canvas.toDataURL("image/jpeg", 0.7);
+        if (!imageDataUrl || imageDataUrl === "data:," || imageDataUrl.length < 100) {
+          alert("画像のキャプチャに失敗しました。カメラの映像が完全に読み込まれるまで少しお待ちいただき、再度お試しください。");
+          return;
+        }
         setCapturedImage(imageDataUrl);
         analyzeHand(imageDataUrl);
       }
@@ -171,6 +175,15 @@ export default function Home() {
       console.error(error);
       alert(error instanceof Error ? error.message : "予期せぬエラーが発生しました");
       setIsAnalyzing(false);
+      
+      // Safariなどのブラウザでローディング中にビデオ要素が一時停止されるのを強制再起動する
+      setTimeout(() => {
+        if (videoRef.current && videoRef.current.paused) {
+          videoRef.current.play().catch(err => {
+            console.error("Error resuming camera stream:", err);
+          });
+        }
+      }, 100);
     }
   };
 
