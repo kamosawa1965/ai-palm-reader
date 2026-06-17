@@ -93,6 +93,9 @@ export default function Home() {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
   };
 
   // 撮影処理
@@ -127,7 +130,6 @@ export default function Home() {
         // 画質を0.7に落としてJPEG圧縮し、転送サイズを大幅に削減
         const imageDataUrl = canvas.toDataURL("image/jpeg", 0.7);
         setCapturedImage(imageDataUrl);
-        stopCamera();
         analyzeHand(imageDataUrl);
       }
     }
@@ -162,17 +164,17 @@ export default function Home() {
 
       setResult(data);
       setAppState("result");
+      stopCamera();
     } catch (error) {
       console.error(error);
       alert(error instanceof Error ? error.message : "予期せぬエラーが発生しました");
-      // エラー時はカメラ画面に戻すか、ホーム画面に戻す
+      // エラー時はカメラ画面に戻す（カメラは起動したままなので再起動不要）
       setAppState("camera");
-      // カメラを再起動
-      startCamera();
     }
   };
 
   const resetApp = () => {
+    stopCamera();
     setCapturedImage(null);
     setResult(null);
     setAppState("home");
