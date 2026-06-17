@@ -23,8 +23,8 @@ export async function POST(req: Request) {
     // Base64のプレフィックス(data:image/jpeg;base64,)を削除
     const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
 
-    // 画像とテキストのマルチモーダル対応である安定版の 1.5 flash モデルを使用
-    const modelName = "gemini-1.5-flash";
+    // 画像とテキストのマルチモーダル対応である安定版の 2.5 flash モデルを使用
+    const modelName = "gemini-2.5-flash";
     console.log(`[Gemini API] Requesting with model: ${modelName}`);
     const model = genAI.getGenerativeModel({ model: modelName });
 
