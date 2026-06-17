@@ -87,6 +87,7 @@ export async function POST(req: Request) {
     }
 
     const responseText = result.response.text();
+    console.log("[Gemini API] Raw Response:", responseText);
     
     // AIの回答からJSON部分のみを抽出（```json などのマークダウンを削除）
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -95,6 +96,7 @@ export async function POST(req: Request) {
     }
 
     const parsedResult = JSON.parse(jsonMatch[0]);
+    console.log("[Gemini API] Parsed JSON:", parsedResult);
 
     return NextResponse.json(parsedResult);
 
