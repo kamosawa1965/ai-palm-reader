@@ -65,6 +65,8 @@
 
 .input {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 0.85rem 1.2rem;
   border-radius: 0.75rem;
   border: 1px solid rgba(138, 123, 116, 0.2);
