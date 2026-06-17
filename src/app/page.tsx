@@ -26,12 +26,47 @@ export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  const handleBirthDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/\D/g, ""); // 数字以外を除去
+    if (value.length > 8) value = value.slice(0, 8); // 8桁までに制限
+
+    // 自動的に YYYY/MM/DD フォーマットに成形
+    let formatted = value;
+    if (value.length > 4 && value.length <= 6) {
+      formatted = `${value.slice(0, 4)}/${value.slice(4)}`;
+    } else if (value.length > 6) {
+      formatted = `${value.slice(0, 4)}/${value.slice(4, 6)}/${value.slice(6)}`;
+    }
+    
+    setBirthDate(formatted);
+  };
+
   // カメラの起動
   const handleStartClick = () => {
     if (!birthDate || !gender) {
       alert("精度の高い鑑定のために、生年月日と性別を入力してください。");
       return;
     }
+
+    // 生年月日のフォーマットチェック (YYYY/MM/DD)
+    const datePattern = /^\d{4}\/\d{2}\/\d{2}$/;
+    if (!datePattern.test(birthDate)) {
+      alert("生年月日は「年/月/日（例：1995/10/20）」の形式で入力してください。");
+      return;
+    }
+
+    // 存在しない日付（例: 2026/02/31 など）のチェック
+    const [year, month, day] = birthDate.split("/").map(Number);
+    const dateObj = new Date(year, month - 1, day);
+    if (
+      dateObj.getFullYear() !== year ||
+      dateObj.getMonth() + 1 !== month ||
+      dateObj.getDate() !== day
+    ) {
+      alert("有効な正しい日付を入力してください。");
+      return;
+    }
+
     startCamera();
   };
 
@@ -267,10 +302,13 @@ export default function Home() {
               <div className={styles.inputGroup}>
                 <label className={styles.label}>生年月日</label>
                 <input 
-                  type="date" 
+                  type="text" 
+                  inputMode="numeric"
+                  placeholder="例：1995/10/20"
                   className={styles.input} 
                   value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
+                  onChange={handleBirthDateChange}
+                  maxLength={10}
                 />
               </div>
               <div className={styles.inputGroup}>
