@@ -475,3 +475,36 @@
 .closeButton:hover {
   background: rgba(138, 123, 116, 0.15);
 }
+
+/* カメラローディングオーバーレイ */
+.cameraLoadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  z-index: 50;
+}
+
+.cameraLoadingTitle {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #4a403a;
+  margin: 0;
+}
+
+.cameraLoadingSubtitle {
+  font-size: 0.9rem;
+  color: #6e5f58;
+  margin: 0;
+  text-align: center;
+  padding: 0 1rem;
+}

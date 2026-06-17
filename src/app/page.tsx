@@ -23,6 +23,7 @@ export default function Home() {
   const [result, setResult] = useState<FortuneResult | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const [shareModalOpen, setShareModalOpen] = useState<boolean>(false);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -137,7 +138,7 @@ export default function Home() {
 
   // 手相の解析（バックエンドAPI呼び出し）
   const analyzeHand = async (imageData: string) => {
-    setAppState("loading");
+    setIsAnalyzing(true);
     
     try {
       const response = await fetch("/api/analyze", {
@@ -163,13 +164,13 @@ export default function Home() {
       }
 
       setResult(data);
+      setIsAnalyzing(false);
       setAppState("result");
       stopCamera();
     } catch (error) {
       console.error(error);
       alert(error instanceof Error ? error.message : "予期せぬエラーが発生しました");
-      // エラー時はカメラ画面に戻す（カメラは起動したままなので再起動不要）
-      setAppState("camera");
+      setIsAnalyzing(false);
     }
   };
 
@@ -365,39 +366,42 @@ export default function Home() {
                   手のひらを<br />枠内に合わせてください
                 </div>
               </div>
+
+              <AnimatePresence>
+                {isAnalyzing && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className={styles.cameraLoadingOverlay}
+                  >
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                    >
+                      <Sparkles size={56} color="#d4a3b3" />
+                    </motion.div>
+                    <h3 className={styles.cameraLoadingTitle}>手相を分析中...</h3>
+                    <p className={styles.cameraLoadingSubtitle}>生命線、知能線、感情線を分析しています</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div className={styles.scannerLine}></div>
             </div>
             <div className="flex gap-4">
-              <button className="btn-secondary" onClick={resetApp}>
+              <button className="btn-secondary" onClick={resetApp} disabled={isAnalyzing}>
                 キャンセル
               </button>
-              <button className="btn-primary" onClick={capturePhoto}>
+              <button className="btn-primary" onClick={capturePhoto} disabled={isAnalyzing}>
                 <Sparkles size={24} />
-                鑑定開始
+                {isAnalyzing ? "分析中..." : "鑑定開始"}
               </button>
             </div>
           </div>
         )}
 
-        {/* ローディング画面 */}
-        {appState === "loading" && (
-          <motion.div
-            key="loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className={styles.loadingContainer}
-          >
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-            >
-              <Sparkles size={64} color="#d4a3b3" />
-            </motion.div>
-            <h2 className={styles.loadingTitle}>あなたの手相を読み解いています...</h2>
-            <p className={styles.loadingSubtitle}>生命線、知能線、感情線を丁寧に分析中</p>
-          </motion.div>
-        )}
+
 
         {/* 結果画面 */}
         {appState === "result" && result && (
