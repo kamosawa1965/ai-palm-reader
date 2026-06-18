@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
 // .env または Vercelの環境変数からAPIキーを取得
@@ -26,12 +26,68 @@ export async function POST(req: Request) {
     // 画像とテキストのマルチモーダル対応である安定版の 2.5 flash モデルを使用
     const modelName = "gemini-2.5-flash";
     console.log(`[Gemini API] Requesting with model: ${modelName}`);
-    const model = genAI.getGenerativeModel({ model: modelName });
+
+    const model = genAI.getGenerativeModel({
+      model: modelName,
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: SchemaType.OBJECT,
+          properties: {
+            isHand: {
+              type: SchemaType.BOOLEAN,
+              description: "画像が人間の手のひら（手相の線が判別できる状態）である場合はtrue、そうでない場合はfalse"
+            },
+            errorMessage: {
+              type: SchemaType.STRING,
+              description: "isHandがfalseの場合に、ユーザーに提示するエラーメッセージ。"
+            },
+            work: {
+              type: SchemaType.OBJECT,
+              properties: {
+                score: { type: SchemaType.INTEGER, description: "仕事運の点数 (0〜100)" },
+                text: { type: SchemaType.STRING, description: "仕事運に関する鑑定結果と解説（50文字程度）" }
+              },
+              required: ["score", "text"]
+            },
+            love: {
+              type: SchemaType.OBJECT,
+              properties: {
+                score: { type: SchemaType.INTEGER, description: "恋愛運の点数 (0〜100)" },
+                text: { type: SchemaType.STRING, description: "恋愛運に関する鑑定結果と解説（50文字程度）" }
+              },
+              required: ["score", "text"]
+            },
+            money: {
+              type: SchemaType.OBJECT,
+              properties: {
+                score: { type: SchemaType.INTEGER, description: "金運の点数 (0〜100)" },
+                text: { type: SchemaType.STRING, description: "金運に関する鑑定結果と解説（50文字程度）" }
+              },
+              required: ["score", "text"]
+            },
+            health: {
+              type: SchemaType.OBJECT,
+              properties: {
+                score: { type: SchemaType.INTEGER, description: "健康運の点数 (0〜100)" },
+                text: { type: SchemaType.STRING, description: "健康運に関する鑑定結果と解説（50文字程度）" }
+              },
+              required: ["score", "text"]
+            },
+            advice: {
+              type: SchemaType.STRING,
+              description: "総合的なポジティブなアドバイス（100文字程度）"
+            }
+          },
+          required: ["isHand", "errorMessage", "work", "love", "money", "health", "advice"]
+        }
+      }
+    });
 
     const prompt = `
 あなたは世界トップクラスの天才手相鑑定士です。
 まず、送られた画像が「人間の手のひら（手相の線が判別できる状態）」であるかを厳密に判定してください。
-もし、手の甲や、人間以外のもの、手相が全く見えない画像だった場合は、占いを中止してください。
+もし、手の甲や、人間以外のもの、手相が全く見えない画像だった場合は、占いを中止し、isHandをfalseに設定してください。
 
 対象者のプロフィール：
 ・生年月日：${birthDate}
@@ -50,7 +106,8 @@ export async function POST(req: Request) {
   "advice": "総合的なポジティブなアドバイス（100文字程度）"
 }
 
-※画像が手のひらでない場合（isHandがfalseの場合）は、errorMessageのみ適切な理由を入力し、他の項目（work, love等）は空のまま返してください。
+※画像が手のひらでない場合（isHandがfalseの場合）は、errorMessageに適切な理由を入力してください。
+その場合もJSON Schemaを満たすため、work、love、money、healthはそれぞれ { "score": 0, "text": "" }、adviceは空文字列を返してください。
     `;
 
     // 一時的な503エラーなどの混雑対策として、自動リトライロジック（最大3回）を実装

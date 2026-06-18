@@ -163,7 +163,8 @@ export default function Home() {
         throw new Error(data.error || "解析に失敗しました");
       }
 
-      if (data.isHand === false) {
+      // isHandが明示的にtrueではない（false、"false"、未定義など）の場合は、手のひらではないとみなす
+      if (data.isHand === false || data.isHand === "false" || !data.isHand) {
         throw new Error(data.errorMessage || "手のひらがはっきりと写っていません。もう一度撮影してください。");
       }
 
