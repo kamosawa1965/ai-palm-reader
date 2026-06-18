@@ -324,6 +324,17 @@
   margin-bottom: 1rem;
 }
 
+.fallbackNotice {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(184, 125, 143, 0.35);
+  border-radius: 0.9rem;
+  background: rgba(245, 236, 233, 0.8);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
 .glassPanel {
   background: rgba(255, 255, 255, 0.9); /* Solid-ish non-transparent backdrop */
   backdrop-filter: blur(12px);

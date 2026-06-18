@@ -15,12 +15,38 @@ interface FortuneResult {
   advice: string;
 }
 
+const createFallbackResult = (birthDate: string, gender: string): FortuneResult => {
+  const seed = `${birthDate}-${gender}`.split("").reduce((total, char) => total + char.charCodeAt(0), 0);
+  const score = (offset: number) => 68 + ((seed + offset) % 25);
+
+  return {
+    work: {
+      score: score(3),
+      text: "今日は身近な課題を一つずつ整えることで、仕事や学びの流れが穏やかに上向いていきます。"
+    },
+    love: {
+      score: score(11),
+      text: "素直な言葉と小さな気遣いが、人との距離を心地よく縮めてくれる一日になりそうです。"
+    },
+    money: {
+      score: score(17),
+      text: "必要なものを丁寧に選ぶ意識が金運を支えます。衝動より納得感を大切にしてみましょう。"
+    },
+    health: {
+      score: score(23),
+      text: "無理に頑張りすぎず、深呼吸や軽いストレッチで心身のリズムを整えるのがおすすめです。"
+    },
+    advice: "今ある良さを信じて、小さな一歩を大切にしてください。焦らず自分のペースを守ることが、次の幸運につながります。"
+  };
+};
+
 export default function Home() {
   const [appState, setAppState] = useState<AppState>("home");
   const [birthDate, setBirthDate] = useState<string>("");
   const [gender, setGender] = useState<string>("");
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [result, setResult] = useState<FortuneResult | null>(null);
+  const [isFallbackResult, setIsFallbackResult] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [shareModalOpen, setShareModalOpen] = useState<boolean>(false);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
@@ -160,6 +186,15 @@ export default function Home() {
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 429 || data.code === "AI_QUOTA_EXCEEDED") {
+          setResult(createFallbackResult(birthDate, gender));
+          setIsFallbackResult(true);
+          setIsAnalyzing(false);
+          setAppState("result");
+          stopCamera();
+          return;
+        }
+
         throw new Error(data.error || "解析に失敗しました");
       }
 
@@ -169,6 +204,7 @@ export default function Home() {
       }
 
       setResult(data);
+      setIsFallbackResult(false);
       setIsAnalyzing(false);
       setAppState("result");
       stopCamera();
@@ -192,6 +228,7 @@ export default function Home() {
     stopCamera();
     setCapturedImage(null);
     setResult(null);
+    setIsFallbackResult(false);
     setAppState("home");
   };
 
@@ -428,6 +465,12 @@ export default function Home() {
             <h2 className={styles.resultTitle}>
               鑑定結果
             </h2>
+
+            {isFallbackResult && (
+              <div className={styles.fallbackNotice}>
+                現在AI分析の利用枠に達しているため、簡易診断モードで結果を表示しています。
+              </div>
+            )}
             
             {capturedImage && (
               <img src={capturedImage} alt="Your hand" className={styles.resultImage} />

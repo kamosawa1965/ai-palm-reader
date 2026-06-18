@@ -4,6 +4,16 @@ import { NextResponse } from "next/server";
 // .env または Vercelの環境変数からAPIキーを取得
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
+const isQuotaError = (error: unknown) => {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return (
+    message.includes("429") ||
+    message.includes("resource_exhausted") ||
+    message.includes("quota exceeded") ||
+    message.includes("too many requests")
+  );
+};
+
 export async function POST(req: Request) {
   try {
     const { imageBase64, birthDate, gender } = await req.json();
@@ -129,6 +139,10 @@ export async function POST(req: Request) {
         ]);
         break; // 成功したらループを抜ける
       } catch (err) {
+        if (isQuotaError(err)) {
+          throw err;
+        }
+
         attempts++;
         if (attempts >= maxAttempts) {
           throw err; // 3回とも失敗した場合は例外を投げる
@@ -159,16 +173,21 @@ export async function POST(req: Request) {
 
   } catch (error) {
     console.error("Error analyzing image:", error);
+
+    if (isQuotaError(error)) {
+      return NextResponse.json(
+        {
+          error: "AI分析の利用枠に達しました。",
+          code: "AI_QUOTA_EXCEEDED"
+        },
+        { status: 429 }
+      );
+    }
+
     let errorMessage = "サーバーエラーが発生しました。時間を置いて再度お試しください。";
     if (error instanceof Error) {
       const msg = error.message;
       if (
-        msg.includes("429") || 
-        msg.includes("Quota exceeded") || 
-        msg.includes("Too Many Requests")
-      ) {
-        errorMessage = "APIの利用回数制限（クォータ制限）に達しました。1〜2分ほど時間を置いてから、再度撮影をお試しください。";
-      } else if (
         msg.includes("503") || 
         msg.includes("Service Unavailable") || 
         msg.includes("high demand")
