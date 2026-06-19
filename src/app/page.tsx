@@ -125,6 +125,14 @@ export default function Home() {
     }
   };
 
+  const showFallbackResult = () => {
+    setResult(createFallbackResult(birthDate, gender));
+    setIsFallbackResult(true);
+    setIsAnalyzing(false);
+    setAppState("result");
+    stopCamera();
+  };
+
   // 撮影処理
   const capturePhoto = () => {
     if (videoRef.current) {
@@ -186,21 +194,32 @@ export default function Home() {
       const data = await response.json();
 
       if (!response.ok) {
-        if (response.status === 429 || data.code === "AI_QUOTA_EXCEEDED") {
-          setResult(createFallbackResult(birthDate, gender));
-          setIsFallbackResult(true);
-          setIsAnalyzing(false);
-          setAppState("result");
-          stopCamera();
+        if (
+          response.status === 429 ||
+          response.status >= 500 ||
+          data.code === "AI_QUOTA_EXCEEDED" ||
+          data.code === "AI_SERVICE_UNAVAILABLE"
+        ) {
+          showFallbackResult();
           return;
         }
 
-        throw new Error(data.error || "解析に失敗しました");
+        throw new Error("診断処理に失敗しました。もう一度お試しください。");
       }
 
       // isHandが明示的にtrueではない（false、"false"、未定義など）の場合は、手のひらではないとみなす
       if (data.isHand === false || data.isHand === "false" || !data.isHand) {
-        throw new Error(data.errorMessage || "手のひらがはっきりと写っていません。もう一度撮影してください。");
+        alert(data.errorMessage || "手のひらがはっきりと写っていません。もう一度撮影してください。");
+        setIsAnalyzing(false);
+
+        setTimeout(() => {
+          if (videoRef.current && videoRef.current.paused) {
+            videoRef.current.play().catch(err => {
+              console.error("Error resuming camera stream:", err);
+            });
+          }
+        }, 100);
+        return;
       }
 
       setResult(data);
@@ -210,17 +229,7 @@ export default function Home() {
       stopCamera();
     } catch (error) {
       console.error(error);
-      alert(error instanceof Error ? error.message : "予期せぬエラーが発生しました");
-      setIsAnalyzing(false);
-      
-      // Safariなどのブラウザでローディング中にビデオ要素が一時停止されるのを強制再起動する
-      setTimeout(() => {
-        if (videoRef.current && videoRef.current.paused) {
-          videoRef.current.play().catch(err => {
-            console.error("Error resuming camera stream:", err);
-          });
-        }
-      }, 100);
+      showFallbackResult();
     }
   };
 
@@ -468,7 +477,7 @@ export default function Home() {
 
             {isFallbackResult && (
               <div className={styles.fallbackNotice}>
-                現在AI分析の利用枠に達しているため、簡易診断モードで結果を表示しています。
+                ただいまAI分析を利用できないため、簡易診断モードで結果を表示しています。
               </div>
             )}
             

@@ -184,19 +184,12 @@ export async function POST(req: Request) {
       );
     }
 
-    let errorMessage = "サーバーエラーが発生しました。時間を置いて再度お試しください。";
-    if (error instanceof Error) {
-      const msg = error.message;
-      if (
-        msg.includes("503") || 
-        msg.includes("Service Unavailable") || 
-        msg.includes("high demand")
-      ) {
-        errorMessage = "AIサーバーが一時的に大変混み合っています。数十秒〜1分ほど時間を空けて、再度撮影をお試しください。";
-      } else {
-        errorMessage = msg;
-      }
-    }
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "ただいまAI診断を利用できません。",
+        code: "AI_SERVICE_UNAVAILABLE"
+      },
+      { status: 503 }
+    );
   }
 }
