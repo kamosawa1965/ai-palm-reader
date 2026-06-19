@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Sparkles, RefreshCw, Share2, Copy, Mail } from "lucide-react";
 import styles from "./page.module.css";
 
-type AppState = "home" | "camera" | "loading" | "result";
+type AppState = "home" | "camera" | "preview" | "loading" | "result";
 
 interface FortuneResult {
   work: { score: number; text: string };
@@ -169,9 +169,21 @@ export default function Home() {
           return;
         }
         setCapturedImage(imageDataUrl);
-        analyzeHand(imageDataUrl);
+        stopCamera();
+        setAppState("preview");
       }
     }
+  };
+
+  const handleConfirmPhoto = () => {
+    if (!capturedImage || isAnalyzing) return;
+    analyzeHand(capturedImage);
+  };
+
+  const handleRetakePhoto = () => {
+    if (isAnalyzing) return;
+    setCapturedImage(null);
+    startCamera();
   };
 
   // 手相の解析（バックエンドAPI呼び出し）
@@ -459,6 +471,45 @@ export default function Home() {
               </button>
             </div>
           </div>
+        )}
+
+
+        {/* 撮影画像の確認画面 */}
+        {appState === "preview" && capturedImage && (
+          <motion.div
+            key="preview"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={`${styles.previewContainer} ${styles.glassPanel}`}
+          >
+            <h2 className={styles.resultTitle}>撮影画像を確認してください</h2>
+
+            <div
+              className={styles.previewImage}
+              role="img"
+              aria-label="撮影した手のひら"
+              style={{ backgroundImage: `url(${capturedImage})` }}
+            />
+
+            <div className={styles.previewActions}>
+              <button
+                className="btn-secondary"
+                onClick={handleRetakePhoto}
+                disabled={isAnalyzing}
+              >
+                撮り直す
+              </button>
+              <button
+                className="btn-primary"
+                onClick={handleConfirmPhoto}
+                disabled={isAnalyzing}
+              >
+                <Sparkles size={24} />
+                {isAnalyzing ? "分析中..." : "この写真で診断する"}
+              </button>
+            </div>
+          </motion.div>
         )}
 
 
