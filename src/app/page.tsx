@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Sparkles, RefreshCw, Share2, Copy, Mail } from "lucide-react";
 import styles from "./page.module.css";
@@ -14,6 +14,80 @@ interface FortuneResult {
   health: { score: number; text: string };
   advice: string;
 }
+
+interface SavedDiagnosis {
+  version: 1;
+  result: FortuneResult;
+  isFallback: boolean;
+  diagnosedAt: string;
+}
+
+const SAVED_DIAGNOSIS_KEY = "ai-palm-reader:last-diagnosis";
+
+const isFortuneSection = (value: unknown): value is FortuneResult["work"] => {
+  if (!value || typeof value !== "object") return false;
+
+  const section = value as Record<string, unknown>;
+  return (
+    typeof section.score === "number" &&
+    Number.isFinite(section.score) &&
+    section.score >= 0 &&
+    section.score <= 100 &&
+    typeof section.text === "string"
+  );
+};
+
+const isFortuneResult = (value: unknown): value is FortuneResult => {
+  if (!value || typeof value !== "object") return false;
+
+  const result = value as Record<string, unknown>;
+  return (
+    isFortuneSection(result.work) &&
+    isFortuneSection(result.love) &&
+    isFortuneSection(result.money) &&
+    isFortuneSection(result.health) &&
+    typeof result.advice === "string"
+  );
+};
+
+const copyFortuneResult = (result: FortuneResult): FortuneResult => ({
+  work: { score: result.work.score, text: result.work.text },
+  love: { score: result.love.score, text: result.love.text },
+  money: { score: result.money.score, text: result.money.text },
+  health: { score: result.health.score, text: result.health.text },
+  advice: result.advice,
+});
+
+const parseSavedDiagnosis = (value: string): SavedDiagnosis | null => {
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    if (
+      parsed.version !== 1 ||
+      typeof parsed.isFallback !== "boolean" ||
+      typeof parsed.diagnosedAt !== "string" ||
+      Number.isNaN(Date.parse(parsed.diagnosedAt)) ||
+      !isFortuneResult(parsed.result)
+    ) {
+      return null;
+    }
+
+    return {
+      version: 1,
+      result: copyFortuneResult(parsed.result),
+      isFallback: parsed.isFallback,
+      diagnosedAt: parsed.diagnosedAt,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const formatDiagnosisDate = (diagnosedAt: string): string => {
+  const date = new Date(diagnosedAt);
+  const pad = (value: number) => String(value).padStart(2, "0");
+
+  return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
 
 const createFallbackResult = (birthDate: string, gender: string): FortuneResult => {
   const seed = `${birthDate}-${gender}`.split("").reduce((total, char) => total + char.charCodeAt(0), 0);
@@ -47,11 +121,32 @@ export default function Home() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [result, setResult] = useState<FortuneResult | null>(null);
   const [isFallbackResult, setIsFallbackResult] = useState<boolean>(false);
+  const [savedDiagnosis, setSavedDiagnosis] = useState<SavedDiagnosis | null>(null);
+  const [isViewingSavedDiagnosis, setIsViewingSavedDiagnosis] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [shareModalOpen, setShareModalOpen] = useState<boolean>(false);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    const loadSavedDiagnosis = () => {
+      try {
+        const storedValue = window.localStorage.getItem(SAVED_DIAGNOSIS_KEY);
+        if (!storedValue) return;
+
+        const storedDiagnosis = parseSavedDiagnosis(storedValue);
+        if (storedDiagnosis) {
+          setSavedDiagnosis(storedDiagnosis);
+        }
+      } catch (error) {
+        console.error("Failed to load the previous diagnosis:", error);
+      }
+    };
+
+    const timeoutId = window.setTimeout(loadSavedDiagnosis, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   const handleBirthDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, ""); // 数字以外を除去
@@ -125,11 +220,30 @@ export default function Home() {
     }
   };
 
+  const saveDiagnosis = (diagnosisResult: FortuneResult, isFallback: boolean) => {
+    const diagnosis: SavedDiagnosis = {
+      version: 1,
+      result: copyFortuneResult(diagnosisResult),
+      isFallback,
+      diagnosedAt: new Date().toISOString(),
+    };
+
+    try {
+      window.localStorage.setItem(SAVED_DIAGNOSIS_KEY, JSON.stringify(diagnosis));
+      setSavedDiagnosis(diagnosis);
+    } catch (error) {
+      console.error("Failed to save the diagnosis:", error);
+    }
+  };
+
   const showFallbackResult = () => {
-    setResult(createFallbackResult(birthDate, gender));
+    const fallbackResult = createFallbackResult(birthDate, gender);
+    setResult(fallbackResult);
     setIsFallbackResult(true);
+    setIsViewingSavedDiagnosis(false);
     setIsAnalyzing(false);
     setAppState("result");
+    saveDiagnosis(fallbackResult, true);
     stopCamera();
   };
 
@@ -234,10 +348,17 @@ export default function Home() {
         return;
       }
 
-      setResult(data);
+      if (!isFortuneResult(data)) {
+        throw new Error("Invalid diagnosis response");
+      }
+
+      const diagnosisResult = copyFortuneResult(data);
+      setResult(diagnosisResult);
       setIsFallbackResult(false);
+      setIsViewingSavedDiagnosis(false);
       setIsAnalyzing(false);
       setAppState("result");
+      saveDiagnosis(diagnosisResult, false);
       stopCamera();
     } catch (error) {
       console.error(error);
@@ -250,7 +371,19 @@ export default function Home() {
     setCapturedImage(null);
     setResult(null);
     setIsFallbackResult(false);
+    setIsViewingSavedDiagnosis(false);
     setAppState("home");
+  };
+
+  const showSavedDiagnosis = () => {
+    if (!savedDiagnosis) return;
+
+    stopCamera();
+    setCapturedImage(null);
+    setResult(copyFortuneResult(savedDiagnosis.result));
+    setIsFallbackResult(savedDiagnosis.isFallback);
+    setIsViewingSavedDiagnosis(true);
+    setAppState("result");
   };
 
   const getShareText = () => {
@@ -412,6 +545,15 @@ export default function Home() {
                 <Camera size={24} />
                 手相を鑑定する
               </button>
+
+              {savedDiagnosis && (
+                <button
+                  className="btn-secondary w-full justify-center"
+                  onClick={showSavedDiagnosis}
+                >
+                  前回の診断結果を見る
+                </button>
+              )}
               
               <div className={styles.disclaimer}>
                 <p><strong>【免責事項】</strong></p>
@@ -525,6 +667,13 @@ export default function Home() {
             <h2 className={styles.resultTitle}>
               鑑定結果
             </h2>
+
+            {isViewingSavedDiagnosis && savedDiagnosis && (
+              <div className={styles.fallbackNotice}>
+                <div>前回の診断結果を表示しています。</div>
+                <small>診断日時：{formatDiagnosisDate(savedDiagnosis.diagnosedAt)}</small>
+              </div>
+            )}
 
             {isFallbackResult && (
               <div className={styles.fallbackNotice}>
