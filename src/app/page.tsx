@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Sparkles, RefreshCw, Share2, Copy, Mail } from "lucide-react";
 import styles from "./page.module.css";
@@ -129,6 +129,17 @@ export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
+  const attachCameraStream = useCallback((video: HTMLVideoElement | null) => {
+    videoRef.current = video;
+
+    if (!video || !streamRef.current) return;
+
+    video.srcObject = streamRef.current;
+    video.play().catch((error) => {
+      console.error("Failed to play the camera stream:", error);
+    });
+  }, []);
+
   useEffect(() => {
     const loadSavedDiagnosis = () => {
       try {
@@ -198,10 +209,10 @@ export default function Home() {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" }, // アウトカメラを優先
       });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
       streamRef.current = stream;
+      if (videoRef.current) {
+        attachCameraStream(videoRef.current);
+      }
     } catch (err) {
       console.error("Camera access denied or not available", err);
       alert("カメラへのアクセスが拒否されたか、カメラが見つかりません。");
@@ -570,7 +581,7 @@ export default function Home() {
             <p className={styles.cameraSubtitle}>枠内に手を合わせ、鑑定開始を押してください</p>
             <div className={styles.videoContainer}>
               <video
-                ref={videoRef}
+                ref={attachCameraStream}
                 autoPlay
                 playsInline
                 className={styles.video}
