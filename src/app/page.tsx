@@ -557,6 +557,13 @@ export default function Home() {
                 手相を鑑定する
               </button>
 
+              <div className={styles.disclaimer}>
+                <p><strong>【データの取り扱い】</strong></p>
+                <p>撮影した手のひら画像、生年月日、性別は診断のためAIサービスへ送信されます。</p>
+                <p>これらの情報は、このアプリのlocalStorageやデータベースには保存しません。</p>
+                <p>この端末には、診断結果、簡易診断の使用有無、診断日時のみ保存します。撮影画像、生年月日、性別は保存されません。</p>
+              </div>
+
               {savedDiagnosis && (
                 <button
                   className="btn-secondary w-full justify-center"
@@ -579,6 +586,7 @@ export default function Home() {
           <div className={styles.cameraWrapper}>
             <h2 className={styles.cameraTitle}>手のひらを映してください</h2>
             <p className={styles.cameraSubtitle}>枠内に手を合わせ、鑑定開始を押してください</p>
+            <p className={styles.cameraSubtitle}>撮影画像は診断のためAIサービスへ送信されます。</p>
             <div className={styles.videoContainer}>
               <video
                 ref={attachCameraStream}
@@ -682,13 +690,14 @@ export default function Home() {
             {isViewingSavedDiagnosis && savedDiagnosis && (
               <div className={styles.fallbackNotice}>
                 <div>前回の診断結果を表示しています。</div>
+                <div>この端末に保存された診断結果です。撮影画像、生年月日、性別は保存されていません。</div>
                 <small>診断日時：{formatDiagnosisDate(savedDiagnosis.diagnosedAt)}</small>
               </div>
             )}
 
             {isFallbackResult && (
               <div className={styles.fallbackNotice}>
-                ただいまAI分析を利用できないため、簡易診断モードで結果を表示しています。
+                AIによる画像分析を利用できないため、入力情報をもとにアプリ内で生成した簡易結果を表示しています。AIによる手相分析結果ではありません。
               </div>
             )}
             
@@ -749,6 +758,7 @@ export default function Home() {
             <div className={styles.disclaimer} style={{ marginTop: "1.5rem" }}>
               <p><strong>【免責事項】</strong></p>
               <p>本アプリの鑑定結果は、AIがインターネット上の学習データをもとに独自に生成したエンターテインメント目的のものです。占い結果の正確性、完全性、または将来の実現性を保証するものではありません。あくまで参考程度の情報として、前向きな気持ちでお楽しみください。</p>
+              <p>本結果は、医療・健康・法律・金銭その他の専門的な助言に代わるものではありません。重要な判断には利用せず、必要に応じて専門家へご相談ください。</p>
             </div>
           </motion.div>
         )}
